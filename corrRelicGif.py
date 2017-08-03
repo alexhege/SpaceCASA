@@ -54,10 +54,10 @@ dec = '-05d00m00.0s'
 
 #formatted orbit file, absolute or relative path detected
 #'/Users/hegedus/Downloads/Relic_Pipeline/inert_traj_061216_reconfig.txt'
-orbitFile = 'inert_traj_061216_reconfig.txt''
+orbitFile = 'inert_traj_061216_reconfig.txt'
 
 #indexes into time column of spacecraft positions in the orbitFile
-ranges =  ((0, 10)) # or ((0, 2), (23, 28))
+ranges =  ((0, 10), (20, 30)) # or ((0, 2), (23, 28))
 
 timeStep = 60. #timestep in seconds between each sample in orbit file
 
@@ -135,6 +135,8 @@ imWidth = imWidth*casaFactor #factor to allow casa to work, ignore
 #not liking 600 km baselines
 
 img = plimg.imread(imName).astype(np.float32)
+pfile = open(orbitFile)
+
 
 if tNoise == 'galactic':
     Tgal = 9.e7*(freq/10e6)**(-2.477)
@@ -287,10 +289,6 @@ me.done()
 
 print 'Now importing antenna positions'
 #####import antenna positions
-
-
-
-pfile = open(orbitFile)
 #77200 times, 1 min each
 
 
