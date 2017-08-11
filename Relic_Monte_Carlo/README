@@ -1,0 +1,11 @@
+To run Monte Carlo analysis, do
+
+nohup bash multcasa.sh &
+
+First calls genMC.py to make truth image library
+
+then calls copies of corrRelicMC.py in parallel for a range of parameters
+
+YOU MUST UPDATE pointer to orbit path in corrRelicMC.py
+
+collectData.py makes plots after

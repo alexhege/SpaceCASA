@@ -4,13 +4,18 @@
 ################################################################################
 
 '''
+Alex Hegedus 8/10/17
+alexhege@umich.edu
 This simulation code has been put together to read orbit files and simulate space based radio arrays
 
-instrution on how to run the program
+Edit parameters at top of python files
+
 within casa run this command:
 
 %run corrRelicGif.py
 
+or use
+casa corrRelicGif.py
 
 '''
 
@@ -18,17 +23,17 @@ within casa run this command:
 
 #True: simulate manual correlation to form visibilities (slow)
 # False: use CASA sm.predict to form visibilities (much faster)
-corrMan = False
+corrMan = True
 
 freq = 10e6 #observing frequency in Hz
 
 antennaDiameter = 6.0 #meters
 
 #iterations of cleaning to do while imaging
-cleanIters = 50
+cleanIters = 0
 
 #create and move to output folder, absolute or relative path (to where you called casa if in casa) detected
-outDir = 'RelicOut'
+outDir = 'corr8'
 
 #will be interpolated to imsize x imsize, absolute or relative path detected
 imName = 'cyga_21cm.png'
@@ -57,12 +62,12 @@ dec = '-05d00m00.0s'
 orbitFile = 'inert_traj_061216_reconfig.txt'
 
 #indexes into time column of spacecraft positions in the orbitFile
-ranges =  ((0, 10), (20, 30)) # or ((0, 2), (23, 28))
+ranges =  ((0, 2)) # or ((0, 2), (23, 28))
 
 timeStep = 60. #timestep in seconds between each sample in orbit file
 
 #choose number of spacecraft to test, takes off random antennae if less than number in orbit file
-wantedSC = 32
+wantedSC = 8
 
 #positional error with sigma dTau nanoseconds of light travel time
 posErr = True
@@ -80,6 +85,7 @@ import time
 import os,sys
 import shutil
 from collections import defaultdict
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import random
@@ -392,7 +398,7 @@ s = np.array([x, y, z])
 
 
 #get x and y axes perp to s
-x = np.cross(s, [0, 0, 1])
+x = np.cross(s, [0, 0, 1])#, s)
 y = np.cross(s, x)
 
 #normalize since cross product isn't already 1 for some reason
@@ -429,7 +435,7 @@ largestBL = np.amax(norms)
 print 'starting loop of visibility calculations & MS creation'
 #$
 
-print corrMan
+#print corrMan
 
 RelicCurrMSs = []
 jpgNames = []
@@ -536,7 +542,7 @@ for l in range(length):
 
                 # #get x and y axes perp to s
 
-                tx = np.cross(ts, [0,0,1])
+                tx = np.cross(ts, [0, 0, 1])#, ts)
                 ty = np.cross(ts, tx)
 
                 #normalize since cross product isn't already 1 for some reason
@@ -781,6 +787,7 @@ if corrMan:
     histplot = figure()
     hist(absq, bins=20)
     title("Histogram of abs(Visibility) Ratios, 1.0 is perfect")
+    xlabel("abs(casa vis/correlated vis)")
     savefig('VisAbsRatioHist%i.png'%numsc)
     plt.close(histplot)
 
@@ -789,8 +796,6 @@ if corrMan:
 
 print 'calculating RMSE'
 rmses = []
-
-imregrid(imagename=RelicMergeMS+'.dirty'+str(l)+'.image', output="dirtyReshaped.image", template="DRAGN-10.000MHz.truth")
 
 ia.close()
 ia.open(imageName)
