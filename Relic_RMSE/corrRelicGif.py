@@ -23,7 +23,7 @@ casa corrRelicGif.py
 
 #True: simulate manual correlation to form visibilities (slow)
 # False: use CASA sm.predict to form visibilities (much faster)
-corrMan = True
+corrMan = False
 
 freq = 10e6 #observing frequency in Hz
 
@@ -33,13 +33,13 @@ antennaDiameter = 6.0 #meters
 cleanIters = 0
 
 #create and move to output folder, absolute or relative path (to where you called casa if in casa) detected
-outDir = 'corr8'
+outDir = 'out8'
 
 #will be interpolated to imsize x imsize, absolute or relative path detected
 imName = 'cyga_21cm.png'
 
 #resolution to extrpolate input image to, what CASA will use.  power of 2 better
-imSize = 1024
+imSize = 512
 
 #what casa truth image copy of input truth png will be named
 imageName = 'DRAGN-%3.3fMHz.truth'%(freq/1e6)
@@ -49,8 +49,8 @@ imageName = 'DRAGN-%3.3fMHz.truth'%(freq/1e6)
 gifMode = True
 
 
-imWidth = 800.  #arcseconds width of image
-brightestPix = 500000. #brightest pixel in jansky
+imWidth = 100.  #arcseconds width of image
+brightness = 100 #650e6*500000 #total brightness of DRAGN in Jy
 
 #location of image brightness in the sky, format correctly for CASA!
 ra = '03h00m00.0s'
@@ -62,12 +62,12 @@ dec = '-05d00m00.0s'
 orbitFile = 'inert_traj_061216_reconfig.txt'
 
 #indexes into time column of spacecraft positions in the orbitFile
-ranges =  ((0, 2)) # or ((0, 2), (23, 28))
+ranges =  ((0, 35)) # or ((0, 2), (23, 28))
 
 timeStep = 60. #timestep in seconds between each sample in orbit file
 
 #choose number of spacecraft to test, takes off random antennae if less than number in orbit file
-wantedSC = 8
+wantedSC = 32
 
 #positional error with sigma dTau nanoseconds of light travel time
 posErr = True
@@ -76,7 +76,7 @@ dTau = 5e-9
 thermalNoise = True
 
 #make number in Jy or 'galactic' for simple power law approx of galactic noise
-tNoise = 'galactic'
+tNoise = 9e5 # K 'galactic'
 
 ##################
 
@@ -147,7 +147,8 @@ pfile = open(orbitFile)
 if tNoise == 'galactic':
     Tgal = 9.e7*(freq/10e6)**(-2.477)
     tNoise = Tgal
-
+print tNoise
+print 'is tNoise'
 
 dir1=os.path.expandvars('$PWD')
 #create and move to output folder
@@ -209,7 +210,7 @@ else:
 
 
 avimg -= np.min(avimg)
-avimg *= brightestPix/np.max(avimg)
+avimg *= brightness/np.max(avimg)
 
 zoomimg = spndint.zoom(avimg,float(imSize)/d1)
 zdims = np.shape(zoomimg)
@@ -220,7 +221,7 @@ for i in range(zdims[0]):
             zoomimg[i][j] = 0.0
 
 zoomimg -= np.min(zoomimg)
-zoomimg *= brightestPix/np.max(zoomimg)
+zoomimg *= brightness/np.max(zoomimg)
 
 
 if zdims[0] != zdims[1]:
@@ -240,6 +241,12 @@ z= np.fliplr(z)  #these operations flip to CASA style of storing data
 
 
 casaArr = z.reshape((imSize, imSize, 1, 1))
+
+#renormalize so brighness is entire brightness in JY of all combined
+
+sumCasaArr = float(sum(casaArr))
+
+casaArr = casaArr/sumCasaArr*brightness
 
 ia.fromarray(imageName, pixels=casaArr, overwrite=True)
 
@@ -430,7 +437,8 @@ for i in range(numbl):
         norms[i][j] = np.linalg.norm(baselines[i][j][:2])
 
 largestBL = np.amax(norms)
-
+print largestBL 
+print ' is largest BL'
 
 print 'starting loop of visibility calculations & MS creation'
 #$
@@ -671,7 +679,8 @@ for l in range(length):
 
     ## add errors (noise, gains, polarization leakage, bandpass) to the vsiibility data
     if thermalNoise:
-        sm.setnoise(mode='simplenoise',simplenoise=str(tNoise)+'Jy')
+        #sm.setnoise(tcmb=tNoise)
+	sm.setnoise(mode='simplenoise',simplenoise=str(tNoise*1.38e-23*12200)+'Jy')
         print("corrupting with thermal Noise")
         sm.corrupt()
 
@@ -811,6 +820,10 @@ for l in range(length):
     ia.close()
 
     imregrid(imagename=RelicMergeMS+'.dirty'+str(l)+'.image', output="dirtyReshaped.image", template=imageName, overwrite = True)
+
+    viewer(infile='dirtyReshaped.image',displaytype='raster',
+              outfile='finalRegrid.jpg',outformat='jpg',
+              gui=False)
 
     ia.open('dirtyReshaped.image')
     pix = ia.getchunk()
